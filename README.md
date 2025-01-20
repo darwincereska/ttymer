@@ -14,7 +14,7 @@ TTymer is a simple command-line timer application written in Go that supports bo
 ```bash
 git clone https://github.com/darwincereska/ttymer
 cd ttymer
-go build ttymer.go
+go build
 ```
 
 ## Usage
