@@ -131,6 +131,7 @@ func countdown(time int) {
 }
 
 func main() {
+	help := flag.Bool("help", false, "show help menu")
 	days := flag.Int("d", 0, "days")
 	hours := flag.Int("h", 0, "hours")
 	minutes := flag.Int("m", 0, "minutes")
@@ -139,6 +140,12 @@ func main() {
 	pm_flag := flag.Bool("p", false, "am/pm")
 
 	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		return
+	}
+
 	// Duration mode
 	if *time_flag == 0 && *seconds == 0 && *minutes == 0 && *hours == 0 && *days == 0 {
 		err := errors.New("at least seconds (-s) is required in duration mode")
