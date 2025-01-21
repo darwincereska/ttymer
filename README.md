@@ -83,4 +83,4 @@ Examples:
 
 ## License
 
-[Your chosen license]
+[MIT]
