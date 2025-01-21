@@ -7,6 +7,88 @@ import (
 	"time"
 )
 
+type DisplayMode int
+
+const (
+	StandardMode DisplayMode = iota
+	UIMode
+)
+
+type TimerType int
+
+const (
+	DurationTimer TimerType = iota
+	ClockTimer
+)
+
+// These settings hold all the configuration for the timer
+type Settings struct {
+	DisplayMode DisplayMode
+	TimerType   TimerType
+
+	// Duration Mode Settings
+	Duration struct {
+		Days    int
+		Hours   int
+		Minutes int
+		Seconds int
+	}
+
+	// Clock mode Settings
+	Clock struct {
+		Time int
+		PM   bool
+	}
+}
+
+// This NewSettings function creates and returns settings with default values
+func NewSettings() *Settings {
+	return &Settings{
+		DisplayMode: StandardMode,
+		TimerType:   DurationTimer,
+	}
+}
+
+// this parseFlags func parses the command line flags into the settings struct
+func ParseFlags() *Settings {
+	settings := NewSettings()
+
+	// Display mode flag
+	uiFlag := flag.Bool("ui", false, "Use the TUI interface")
+
+	// Duration Timer Flags
+	flag.IntVar(&settings.Duration.Days, "d", 0, "days for timer")
+	flag.IntVar(&settings.Duration.Hours, "h", 0, "hours for timer")
+	flag.IntVar(&settings.Duration.Minutes, "m", 0, "minutes for timer")
+	flag.IntVar(&settings.Duration.Seconds, "s", 0, "seconds for timer")
+
+	// Clock Timer Flags
+	flag.IntVar(&settings.Clock.Time, "t", 0, "time mode (format: 1-12 or 100-1159)")
+	flag.BoolVar(&settings.Clock.PM, "p", false, "PM flag for clock mode")
+
+	// Help flag
+	helpFlag := flag.Bool("help", false, "Shows help menu")
+
+	// Parse the flags
+	flag.Parse()
+
+	// Set Display mode
+	if *uiFlag {
+		settings.DisplayMode = UIMode
+	}
+	if *helpFlag {
+		flag.Usage()
+	}
+
+	// Set timer type
+	if settings.Clock.Time != 0 {
+		settings.TimerType = ClockTimer
+	}
+
+	return settings
+
+}
+
 func convertDurationTime(days int, hours int, minutes int, seconds int) int {
 	var total int
 	total += days * 24 * 60 * 60
@@ -49,6 +131,26 @@ func convertClockTime(clockTime int, pm bool) int {
 	return int(target.Sub(now).Seconds())
 }
 
+// GetSeconds calculates total seconds based on settings
+func (s *Settings) GetSeconds() int {
+	switch s.TimerType {
+	case DurationTimer:
+		return convertDurationTime(
+			s.Duration.Days,
+			s.Duration.Hours,
+			s.Duration.Minutes,
+			s.Duration.Seconds,
+		)
+	case ClockTimer:
+		return convertClockTime(
+			s.Clock.Time,
+			s.Clock.PM,
+		)
+	default:
+		return 0
+	}
+}
+
 func formatTimeString(timeInSeconds int) string {
 	days := timeInSeconds / 86400
 	hours := (timeInSeconds % 86400) / 3600
@@ -85,76 +187,33 @@ func notification(title string, text string) {
 }
 
 func countdown(time int) {
-	initialTime := formatTimeString(time)
-	for time > 0 {
-		fmt.Print("\r\033[K") // Clear the line before printing new time
-		fmt.Print(formatTimeString(time))
+	if time > 0 {
+		initialTime := formatTimeString(time)
+		for time > 0 {
+			fmt.Print("\r\033[K") // Clear the line before printing new time
+			fmt.Print(formatTimeString(time))
 
-		time--
-		// Sleep for 1 second
-		exec.Command("sleep", "1").Run()
+			time--
+			// Sleep for 1 second
+			exec.Command("sleep", "1").Run()
+		}
+
+		fmt.Print("\r\033[K")
+		fmt.Println("Your", initialTime, "timer has ended") // Prints Timer after its finished
+
+		// Send notification
+		notification("Timer Ended", fmt.Sprintf("Your %s timer has ended", initialTime))
 	}
-
-	fmt.Print("\r\033[K")
-	fmt.Println("Your", initialTime, "timer has ended") // Prints Timer after its finished
-
-	// Send notification
-	notification("Timer Ended", fmt.Sprintf("Your %s timer has ended", initialTime))
 	return
 }
 
 func main() {
-	help := flag.Bool("help", false, "show help menu")
-	days := flag.Int("d", 0, "days")
-	hours := flag.Int("h", 0, "hours")
-	minutes := flag.Int("m", 0, "minutes")
-	seconds := flag.Int("s", 0, "seconds")
-	time_flag := flag.Int("t", 0, "time mode (format: 1-12 or 100-1159)")
-	pm_flag := flag.Bool("p", false, "am/pm")
-	ui_flag := flag.Bool("ui", false, "Toggles a tui")
-	flag.Parse()
+	settings := ParseFlags()
 
-	if *help {
-		flag.Usage()
+	switch settings.DisplayMode {
+	case StandardMode:
+		countdown(settings.GetSeconds())
+	case UIMode:
+		fmt.Println("UI mode is not implemented yet.")
 	}
-	type Settings struct {
-		days    int
-		hours   int
-		minutes int
-		seconds int
-		time    int
-		pm      bool
-		ui      bool
-	}
-	settings := Settings{
-		days:    *days,
-		hours:   *hours,
-		minutes: *minutes,
-		seconds: *seconds,
-		time:    *time_flag,
-		pm:      *pm_flag,
-		ui:      *ui_flag,
-	}
-	if settings.ui {
-		if settings.time != 0 {
-			if settings.pm {
-				countdown(convertClockTime(settings.time, true))
-			} else {
-				countdown(convertClockTime(settings.time, false))
-			}
-		} else {
-			countdown(convertDurationTime(settings.days, settings.hours, settings.minutes, settings.seconds))
-		}
-	} else {
-		if settings.time != 0 {
-			if settings.pm {
-				countdown(convertClockTime(settings.time, true))
-			} else {
-				countdown(convertClockTime(settings.time, false))
-			}
-		} else {
-			countdown(convertDurationTime(settings.days, settings.hours, settings.minutes, settings.seconds))
-		}
-	}
-
 }
