@@ -1,10 +1,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os/exec"
-	"errors"
 	"time"
 )
 
@@ -20,7 +20,7 @@ type TimeTimer struct {
 	pm   bool
 }
 
-func NewDurationTimer(days int, hours int, minutes int, seconds int) DurationTimer {
+func convertDurationTime(days int, hours int, minutes int, seconds int) int {
 	a := DurationTimer{
 		days:    days,
 		hours:   hours,
@@ -32,16 +32,10 @@ func NewDurationTimer(days int, hours int, minutes int, seconds int) DurationTim
 	total += a.hours * 60 * 60
 	total += a.minutes * 60
 	total += a.seconds
-	countdown(total)
-	return a
+	return total
 }
 
-func NewTimeTimer(clockTime int, pm bool) TimeTimer {
-	a := TimeTimer{
-		time: clockTime,
-		pm:   pm,
-	}
-
+func convertClockTime(clockTime int, pm bool) int {
 	var hours, minutes int
 
 	// Handle 4 digit time (e.g. 1159) vs 2 digit time (e.g. 11)
@@ -71,32 +65,36 @@ func NewTimeTimer(clockTime int, pm bool) TimeTimer {
 		target = target.Add(24 * time.Hour)
 	}
 
-	secondsUntil := int(target.Sub(now).Seconds())
-	countdown(secondsUntil)
-	return a
+	return int(target.Sub(now).Seconds())
+}
+
+func formatTimeString(timeInSeconds int) string {
+	days := timeInSeconds / 86400
+	hours := (timeInSeconds % 86400) / 3600
+	minutes := (timeInSeconds % 3600) / 60
+	seconds := timeInSeconds % 60
+
+	result := ""
+	if days > 0 {
+		result += fmt.Sprintf("%dd ", days)
+	}
+	if hours > 0 {
+		result += fmt.Sprintf("%dh ", hours)
+	}
+	if minutes > 0 {
+		result += fmt.Sprintf("%dm ", minutes)
+	}
+	if seconds > 0 {
+		result += fmt.Sprintf("%ds ", seconds)
+	}
+	return result
 }
 
 func countdown(time int) {
-	initialTime := time // Store initial time for notification
+	initialTime := formatTimeString(time)
 	for time > 0 {
-		days := time / 86400
-		hours := (time % 86400) / 3600
-		minutes := (time % 3600) / 60
-		seconds := time % 60
-
 		fmt.Print("\r\033[K") // Clear the line before printing new time
-		if days > 0 {
-			fmt.Printf("%d"+"d ", days)
-		}
-		if hours > 0 {
-			fmt.Printf("%d"+"h ", hours)
-		}
-		if minutes > 0 {
-			fmt.Printf("%d"+"m ", minutes)
-		}
-		if seconds > 0 {
-			fmt.Printf("%d"+"s ", seconds)
-		}
+		fmt.Print(formatTimeString(time))
 
 		time--
 		// Sleep for 1 second
@@ -104,29 +102,8 @@ func countdown(time int) {
 	}
 	fmt.Println()
 
-	// Calculate original duration components for notification
-	days := initialTime / 86400
-	hours := (initialTime % 86400) / 3600
-	minutes := (initialTime % 3600) / 60
-	seconds := initialTime % 60
-
-	// Build timer duration string
-	durationStr := ""
-	if days > 0 {
-		durationStr += fmt.Sprintf("%dd ", days)
-	}
-	if hours > 0 {
-		durationStr += fmt.Sprintf("%dh ", hours)
-	}
-	if minutes > 0 {
-		durationStr += fmt.Sprintf("%dm ", minutes)
-	}
-	if seconds > 0 {
-		durationStr += fmt.Sprintf("%ds", seconds)
-	}
-
 	// Send notification
-	exec.Command("notify-send", "Timer Complete", fmt.Sprintf("Your %s timer has ended", durationStr)).Run()
+	exec.Command("notify-send", "Timer Complete", fmt.Sprintf("Your %s timer has ended", initialTime)).Run()
 	return
 }
 
@@ -147,19 +124,19 @@ func main() {
 	}
 
 	// Duration mode
-	if *time_flag == 0 && *seconds == 0 && *minutes == 0 && *hours == 0 && *days == 0 {
-		err := errors.New("at least seconds (-s) is required in duration mode")
-		fmt.Println(err)
+	if *time_flag == 0 && (*seconds + *minutes + *hours + *days) == 0 {
+		err := errors.New("Please specify a duration using -s, -m, -h or -d flags")
+		fmt.Println(err) 
 		return
 	}
 
 	if *time_flag != 0 {
-		if *pm_flag == true {
-			NewTimeTimer(*time_flag, true)
+		if *pm_flag {
+			countdown(convertClockTime(*time_flag, true)) // Converts clock time into seconds and then calls the countdown
 		} else {
-			NewTimeTimer(*time_flag, false)
+			countdown(convertClockTime(*time_flag, false)) // Converts clock time into seconds and then calls the countdown
 		}
 	} else {
-		NewDurationTimer(*days, *hours, *minutes, *seconds)
+		countdown(convertDurationTime(*days, *hours, *minutes, *seconds))
 	}
 }
