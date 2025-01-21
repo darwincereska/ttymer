@@ -68,6 +68,7 @@ Examples:
 - `-s`: Seconds (duration mode)
 - `-t`: Time (time mode)
 - `-p`: PM indicator for time mode
+- `-help`: Shows help menu
 
 ## Requirements
 
