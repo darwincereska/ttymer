@@ -1,17 +1,11 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os/exec"
 	"time"
 )
-
-type TimeTimer struct {
-	time int
-	pm   bool
-}
 
 func convertDurationTime(days int, hours int, minutes int, seconds int) int {
 	var total int
@@ -117,28 +111,50 @@ func main() {
 	seconds := flag.Int("s", 0, "seconds")
 	time_flag := flag.Int("t", 0, "time mode (format: 1-12 or 100-1159)")
 	pm_flag := flag.Bool("p", false, "am/pm")
-
+	ui_flag := flag.Bool("ui", false, "Toggles a tui")
 	flag.Parse()
 
 	if *help {
 		flag.Usage()
-		return
 	}
-
-	// Duration mode
-	if *time_flag == 0 && (*seconds+*minutes+*hours+*days) == 0 {
-		err := errors.New("Please specify a duration using -s, -m, -h or -d flags")
-		fmt.Println(err)
-		return
+	type Settings struct {
+		days    int
+		hours   int
+		minutes int
+		seconds int
+		time    int
+		pm      bool
+		ui      bool
 	}
-
-	if *time_flag != 0 {
-		if *pm_flag {
-			countdown(convertClockTime(*time_flag, true)) // Converts clock time into seconds and then calls the countdown
+	settings := Settings{
+		days:    *days,
+		hours:   *hours,
+		minutes: *minutes,
+		seconds: *seconds,
+		time:    *time_flag,
+		pm:      *pm_flag,
+		ui:      *ui_flag,
+	}
+	if settings.ui {
+		if settings.time != 0 {
+			if settings.pm {
+				countdown(convertClockTime(settings.time, true))
+			} else {
+				countdown(convertClockTime(settings.time, false))
+			}
 		} else {
-			countdown(convertClockTime(*time_flag, false)) // Converts clock time into seconds and then calls the countdown
+			countdown(convertDurationTime(settings.days, settings.hours, settings.minutes, settings.seconds))
 		}
 	} else {
-		countdown(convertDurationTime(*days, *hours, *minutes, *seconds))
+		if settings.time != 0 {
+			if settings.pm {
+				countdown(convertClockTime(settings.time, true))
+			} else {
+				countdown(convertClockTime(settings.time, false))
+			}
+		} else {
+			countdown(convertDurationTime(settings.days, settings.hours, settings.minutes, settings.seconds))
+		}
 	}
+
 }
