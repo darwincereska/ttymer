@@ -8,30 +8,17 @@ import (
 	"time"
 )
 
-type DurationTimer struct {
-	seconds int
-	minutes int
-	hours   int
-	days    int
-}
-
 type TimeTimer struct {
 	time int
 	pm   bool
 }
 
 func convertDurationTime(days int, hours int, minutes int, seconds int) int {
-	a := DurationTimer{
-		days:    days,
-		hours:   hours,
-		minutes: minutes,
-		seconds: seconds,
-	}
-	total := 0
-	total += a.days * 24 * 60 * 60
-	total += a.hours * 60 * 60
-	total += a.minutes * 60
-	total += a.seconds
+	var total int
+	total += days * 24 * 60 * 60
+	total += hours * 60 * 60
+	total += minutes * 60
+	total += seconds
 	return total
 }
 
@@ -73,21 +60,34 @@ func formatTimeString(timeInSeconds int) string {
 	hours := (timeInSeconds % 86400) / 3600
 	minutes := (timeInSeconds % 3600) / 60
 	seconds := timeInSeconds % 60
+	var result string
 
-	result := ""
 	if days > 0 {
-		result += fmt.Sprintf("%dd ", days)
+		result += fmt.Sprintf("%dd", days)
+		if hours > 0 || minutes > 0 || seconds > 0 {
+			result += " "
+		}
 	}
 	if hours > 0 {
-		result += fmt.Sprintf("%dh ", hours)
+		result += fmt.Sprintf("%dh", hours)
+		if minutes > 0 || seconds > 0 {
+			result += " "
+		}
 	}
 	if minutes > 0 {
-		result += fmt.Sprintf("%dm ", minutes)
+		result += fmt.Sprintf("%dm", minutes)
+		if seconds > 0 {
+			result += " "
+		}
 	}
 	if seconds > 0 {
-		result += fmt.Sprintf("%ds ", seconds)
+		result += fmt.Sprintf("%ds", seconds)
 	}
 	return result
+}
+
+func notification(title string, text string) {
+	exec.Command("notify-send", title, text).Run()
 }
 
 func countdown(time int) {
@@ -100,10 +100,12 @@ func countdown(time int) {
 		// Sleep for 1 second
 		exec.Command("sleep", "1").Run()
 	}
-	fmt.Println()
+
+	fmt.Print("\r\033[K")
+	fmt.Println("Your", initialTime, "timer has ended") // Prints Timer after its finished
 
 	// Send notification
-	exec.Command("notify-send", "Timer Complete", fmt.Sprintf("Your %s timer has ended", initialTime)).Run()
+	notification("Timer Ended", fmt.Sprintf("Your %s timer has ended", initialTime))
 	return
 }
 
@@ -124,9 +126,9 @@ func main() {
 	}
 
 	// Duration mode
-	if *time_flag == 0 && (*seconds + *minutes + *hours + *days) == 0 {
+	if *time_flag == 0 && (*seconds+*minutes+*hours+*days) == 0 {
 		err := errors.New("Please specify a duration using -s, -m, -h or -d flags")
-		fmt.Println(err) 
+		fmt.Println(err)
 		return
 	}
 
