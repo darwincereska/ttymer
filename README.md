@@ -1,4 +1,11 @@
-![image](logo.svg)
+```
+ _   _                             
+| |_| |_ _   _ _ __ ___   ___ _ __ 
+| __| __| | | | '_ ` _ \ / _ \ '__|
+| |_| |_| |_| | | | | | |  __/ |   
+ \__|\__|\__, |_| |_| |_|\___|_|   
+         |___/
+```
 # 
 TTymer is a simple command-line timer application written in Go that supports both duration-based and time-based countdown functionality.
 
