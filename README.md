@@ -6,8 +6,10 @@
  \__|\__|\__, |_| |_| |_|\___|_|   
          |___/
 ```
+#
+![Screenshot](screenshot.png)
 # 
-TTymer is a simple command-line timer application written in Go that supports both duration-based and time-based countdown functionality.
+ttymer is a simple command-line timer application written in Go that supports both duration-based and time-based countdown functionality.
 
 ## Features
 
@@ -76,6 +78,7 @@ Examples:
 - `-t`: Time (time mode)
 - `-p`: PM indicator for time mode
 - `-help`: Shows help menu
+- `-ui`: enables a tui
 
 ## Requirements
 
