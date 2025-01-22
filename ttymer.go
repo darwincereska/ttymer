@@ -3,9 +3,142 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mbndr/figlet4go"
+	"golang.org/x/term"
+	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
+
+// TUI CODE START ___________________________________
+type model struct {
+	timeRemaining int
+	initialTime   string
+	quitting      bool
+}
+
+// Init implements bubbletea.Model
+func (m model) Init() tea.Cmd {
+	return tea.Batch(
+		tick(),
+		tea.EnterAltScreen,
+	)
+}
+
+// Tick command
+func tick() tea.Cmd {
+	return tea.Tick(time.Second, func(time.Time) tea.Msg {
+		return tickMsg{}
+	})
+}
+
+// Messages
+type tickMsg struct{}
+
+// Update implements bubbletea.Model
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.Type == tea.KeyCtrlC || msg.Type == tea.KeyEsc {
+			m.quitting = true
+			return m, tea.Quit
+		}
+
+	case tickMsg:
+		if m.timeRemaining > 0 {
+			m.timeRemaining--
+			return m, tick()
+		}
+		if m.timeRemaining == 0 {
+			notification("Timer Ended", fmt.Sprintf("Your %s timer has ended", m.initialTime))
+			m.quitting = true
+			return m, tea.Quit
+		}
+	}
+
+	return m, nil
+}
+
+// View implements bubbletea.Model
+func (m model) View() string {
+	if m.quitting {
+		return "Timer ended!\n"
+	}
+
+	// Get terminal dimensions
+	width, height := 80, 24 // default values
+	if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
+		width, height = w, h
+	}
+
+	// Create styles
+	containerStyle := lipgloss.NewStyle().
+		Width(width - 2).   // Subtract 2 for borders
+		Height(height - 2). // Subtract 2 for top and bottom borders
+		Align(lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#FAFAFA")).
+		Padding(1)
+
+	titleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FF75B5")).
+		Bold(true).
+		Width(width - 4). // Subtract border and padding
+		Align(lipgloss.Center)
+
+	quitStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Width(width - 4). // Subtract border and padding
+		Align(lipgloss.Center)
+
+	timerStyle := lipgloss.NewStyle().
+		Width(width - 4). // Subtract border and padding
+		Align(lipgloss.Center)
+
+	// Create figlet
+	ascii := figlet4go.NewAsciiRender()
+	renderStr := formatTimeString(m.timeRemaining)
+
+	// Set some options
+	options := figlet4go.NewRenderOptions()
+	options.FontName = "standard"
+
+	ascii.LoadFont("standard")
+	rendered, _ := ascii.RenderOpts(renderStr, options)
+
+	// Create the content
+	title := titleStyle.Render("TTYMER")
+	timerText := timerStyle.Render(rendered)
+	quitText := quitStyle.Render("Press Ctrl+C to quit")
+
+	// Calculate content height
+	contentHeight := lipgloss.Height(title) + lipgloss.Height(timerText) + lipgloss.Height(quitText) + 4 // +4 for spacing
+
+	// Calculate padding for vertical centering
+	paddingTop := (height - contentHeight - 4) / 2 // -4 for borders and padding
+	if paddingTop < 0 {
+		paddingTop = 0
+	}
+	paddingBottom := height - contentHeight - paddingTop - 4 // -4 for borders and padding
+	if paddingBottom < 0 {
+		paddingBottom = 0
+	}
+
+	// Combine content with padding
+	content := strings.Repeat("\n", paddingTop) +
+		title + "\n\n" +
+		timerText + "\n\n" +
+		quitText +
+		strings.Repeat("\n", paddingBottom)
+
+	// Return the final view
+	return containerStyle.Render(content)
+}
+
+// TUI CODE END ____________________________
 
 type DisplayMode int
 
@@ -214,6 +347,19 @@ func main() {
 	case StandardMode:
 		countdown(settings.GetSeconds())
 	case UIMode:
-		fmt.Println("UI mode is not implemented yet.")
+		initialSeconds := settings.GetSeconds()
+		p := tea.NewProgram(
+			model{
+				timeRemaining: initialSeconds,
+				initialTime:   formatTimeString(initialSeconds),
+			},
+			tea.WithAltScreen(),       // use the full screen
+			tea.WithMouseCellMotion(), // enable mouse support
+		)
+
+		if _, err := p.Run(); err != nil {
+			fmt.Println("Error running program:", err)
+			os.Exit(1)
+		}
 	}
 }
