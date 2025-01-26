@@ -53,4 +53,4 @@ install: build
 
 .PHONY: arch
 arch:
-	makepkg -si
+	BUILDDIR=/tmp/ttymer makepkg -si
