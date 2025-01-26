@@ -51,3 +51,6 @@ fmt:
 install: build
 	go install
 
+.PHONY: arch
+arch:
+	makepkg -si
