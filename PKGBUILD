@@ -12,7 +12,7 @@ source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
 sha256sums=("SKIP")
 
 build() {
-    cd "$pkgname-$pkgver"
+    cd "$srcdir/$pkgname-$pkgver"
     export CGO_CPPFLAGS="${CPPFLAGS}"
     export CGO_CFLAGS="${CFLAGS}"
     export CGO_CXXFLAGS="${CXXFLAGS}"
@@ -22,10 +22,10 @@ build() {
 }
 
 package() {
-    cd "$pkgname-$pkgver"
+    cd "$srcdir/$pkgname-$pkgver"
     install -Dm755 ttymer "$pkgdir/usr/bin/ttymer"
-    
+
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-    
+
     install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }
