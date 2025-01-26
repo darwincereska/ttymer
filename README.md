@@ -17,6 +17,7 @@
 - Time mode: Set timers to specific clock times (12-hour format)
 - Clear countdown display in terminal
 - Desktop notification when timer completes
+- UI Mode: renders a TUI
 
 ## Installation
 
