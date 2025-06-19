@@ -1,6 +1,6 @@
 # Project Variables
 PROJECT_NAME := ttymer
-VERSION := 1.0.1
+VERSION := 1.0.2
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # Tools
