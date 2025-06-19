@@ -1,56 +1,47 @@
-BINARY_NAME=ttymer
-VERSION=1.0.1
-PACKAGE_NAME=ttymer_$(VERSION)_amd64
-GFLAGS=-v
+# Project Variables
+PROJECT_NAME := ttymer
+VERSION := 1.0.1
+BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
-.PHONY: all
+# Tools
+GO ?= go
+
+# Flags
+GFLAGS := -v
+LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
+
+# Directories
+BIN_DIR := bin
+
+.PHONY: all build clean test fmt deps install build-linux build-darwin build-windows
+
 all: build
 
+build: fmt
+	@mkdir -p $(BIN_DIR)
+	$(GO) build $(GFLAGS) $(LDFLAGS) -o $(BIN_DIR)/$(PROJECT_NAME) ./ttymer.go
 
-.PHONY: build
-build:
-	go build $(GFLAGS) -o $(BINARY_NAME) ttymer.go
+build-linux:
+	GOOS=linux GOARCH=amd64 $(GO) build $(GFLAGS) $(LDFLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-linux-amd64 ./ttymer.go
 
-.PHONY: clean
+build-darwin:
+	GOOS=darwin GOARCH=amd64 $(GO) build $(GFLAGS) $(LDFLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-darwin-amd64 ./ttymer.go
+
+build-windows:
+	GOOS=windows GOARCH=amd64 $(GO) build $(GFLAGS) $(LDFLAGS) -o $(BIN_DIR)/$(PROJECT_NAME)-windows-amd64.exe ./ttymer.go
+
 clean:
-	rm -f $(BINARY_NAME)
-	rm -rf $(PACKAGE_NAME)
+	rm -rf $(BIN_DIR) $(PROJECT_NAME)
+	$(GO) clean
 
-.PHONY: test
 test:
-	go test -v ./ ...
+	$(GO) test -v ./...
 
-.PHONY: nix-build
-nix-build:
-	nix-build -E 'with import <nixpkgs> {}; callPackage ./default.nix {}'
-	
-.PHONY: deb
-deb: build
-	mkdir -p $(PACKAGE_NAME)/DEBIAN
-	mkdir -p $(PACKAGE_NAME)/usr/local/bin
-	cp $(BINARY_NAME) $(PACKAGE_NAME)/usr/local/bin/
-	echo "Package: ttymer" > $(PACKAGE_NAME)/DEBIAN/control
-	echo "Version: $(VERSION)" >> $(PACKAGE_NAME)/DEBIAN/control
-	echo "Section: base" >> $(PACKAGE_NAME)/DEBIAN/control
-	echo "Priority: optional" >> $(PACKAGE_NAME)/DEBIAN/control
-	echo "Architecture: amd64" >> $(PACKAGE_NAME)/DEBIAN/control
-	echo "Maintainer: Your Name <your.email@example.com>" >> $(PACKAGE_NAME)/DEBIAN/control
-	echo "Description: A terminal timer application" >> $(PACKAGE_NAME)/DEBIAN/control
-	dpkg-deb --build $(PACKAGE_NAME)
-	rm -rf $(PACKAGE_NAME)
-
-.PHONY: deps
-deps:
-	go mod download
-
-.PHONY: fmt
 fmt:
-	go fmt ./ ...
+	$(GO) fmt ./...
 
-.PHONY: install
+deps:
+	$(GO) mod download
+
 install: build
-	go install
-
-.PHONY: arch
-arch:
-	BUILDDIR=/tmp/ttymer makepkg -si
+	install -Dm755 $(BIN_DIR)/$(PROJECT_NAME) /usr/bin/$(PROJECT_NAME)
