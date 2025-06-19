@@ -6,12 +6,12 @@
 
 buildGoModule {
   pname = "ttymer";
-  version = "1.0.1";
+  version = "1.0.2";
 
   src = fetchFromGitHub {
     owner = "darwincereska";
     repo = "ttymer";
-    rev = "v1.0.1";
+    rev = "v1.0.2";
     hash = "sha256-a3+TAGBz1br2TCu9FxtUN4G3H84NZwwV/fFg5/HbJ2k=";
   };
 
